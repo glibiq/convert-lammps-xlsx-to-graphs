@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Upload Excel &amp; Plot Molecule Graphs</title>
+  <!-- Plotly.js for plotting graphs -->
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <!-- SheetJS library to parse Excel files -->
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h1>Upload Excel File and Display Molecule Graphs</h1>
+  <!-- File input for Excel files -->
+  <input type="file" id="fileInput" accept=".xlsx, .xls" />
+  <!-- Container to hold the graphs -->
+  <div id="graphs"></div>
+
+  <script>
+    // Listen for file selection
+    document.getElementById('fileInput').addEventListener('change', handleFile, false);
+
+    function handleFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      // Use FileReader to read the file as an array buffer
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        // Use the first sheet from the workbook
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        // Convert the sheet to a JSON array with header row
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Ensure there's at least one header row and one data row
+        if (jsonData.length < 2) {
+          alert("The sheet doesn't contain enough data.");
+          return;
+        }
+        
+        // The first row is assumed to be headers
+        const headers = jsonData[0];
+        // The rest are data rows
+        const rows = jsonData.slice(1);
+        
+        // Convert rows to array of objects
+        const dataObjects = rows.map(row => {
+          const obj = {};
+          headers.forEach((header, index) => {
+            obj[header] = row[index];
+          });
+          return obj;
+        });
+        
+        // Now plot the graphs using the parsed data
+        plotGraphs(dataObjects);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function plotGraphs(dataObjects) {
+      // Clear any existing graphs
+      document.getElementById('graphs').innerHTML = '';
+      
+      // Assume the first header is "Timestamp" (you can adjust if needed)
+      const timestampField = Object.keys(dataObjects[0])[0];
+      const timestamps = dataObjects.map(row => row[timestampField]);
+      
+      // Get the molecule columns (all columns except timestamp)
+      const moleculeKeys = Object.keys(dataObjects[0]).filter(key => key !== timestampField);
+      
+      // Loop over each molecule and create a separate graph
+      moleculeKeys.forEach(molecule => {
+        const moleculeData = dataObjects.map(row => row[molecule]);
+        
+        // Create a div for the graph
+        const div = document.createElement('div');
+        div.style.width = '600px';
+        div.style.height = '400px';
+        div.style.marginBottom = '40px';
+        document.getElementById('graphs').appendChild(div);
+        
+        // Create a Plotly trace
+        const trace = {
+          x: timestamps,
+          y: moleculeData,
+          mode: 'lines',
+          name: molecule
+        };
+        
+        // Layout for the graph with y-axis max set to 125
+        const layout = {
+          title: `${molecule} vs ${timestampField}`,
+          xaxis: { title: `${timestampField} (ps)` },
+          yaxis: { title: molecule, range: [0, 125] }
+        };
+        
+        // Render the plot in the created div
+        Plotly.newPlot(div, [trace], layout);
+      });
+    }
+  </script>
+</body>
+</html>
+
