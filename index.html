@@ -10,8 +10,15 @@
 </head>
 <body>
   <h1>Upload Excel File and Display Molecule Graphs</h1>
+  
+  <!-- Input for the max y-axis value with default 125 -->
+  <label for="maxValue">Set Y-Axis Maximum (default 125): </label>
+  <input type="number" id="maxValue" value="125" />
+  <br/><br/>
+  
   <!-- File input for Excel files -->
   <input type="file" id="fileInput" accept=".xlsx, .xls" />
+  
   <!-- Container to hold the graphs -->
   <div id="graphs"></div>
 
@@ -45,7 +52,7 @@
         // The rest are data rows
         const rows = jsonData.slice(1);
         
-        // Convert rows to array of objects
+        // Convert rows to an array of objects
         const dataObjects = rows.map(row => {
           const obj = {};
           headers.forEach((header, index) => {
@@ -64,7 +71,11 @@
       // Clear any existing graphs
       document.getElementById('graphs').innerHTML = '';
       
-      // Assume the first header is "Timestamp" (you can adjust if needed)
+      // Retrieve the max value from the input (default to 125 if not set)
+      const maxValueInput = document.getElementById('maxValue').value;
+      const maxValue = maxValueInput ? parseFloat(maxValueInput) : 125;
+      
+      // Assume the first header is "Timestamp" (adjust if needed)
       const timestampField = Object.keys(dataObjects[0])[0];
       const timestamps = dataObjects.map(row => row[timestampField]);
       
@@ -90,11 +101,11 @@
           name: molecule
         };
         
-        // Layout for the graph with y-axis max set to 125
+        // Layout for the graph with user-defined y-axis max
         const layout = {
           title: `${molecule} vs ${timestampField}`,
           xaxis: { title: `${timestampField} (ps)` },
-          yaxis: { title: molecule, range: [0, 125] }
+          yaxis: { title: molecule, range: [0, maxValue] }
         };
         
         // Render the plot in the created div
